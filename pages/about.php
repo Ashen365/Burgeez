@@ -87,7 +87,7 @@ include('../includes/header.php');
         <div class="w-32 h-32 rounded-full overflow-hidden mx-auto mb-6">
           <img src="../assets/images/chef1.jpg" alt="Chef Rahul Sharma" class="w-full h-full object-cover" onerror="this.src='https://randomuser.me/api/portraits/men/32.jpg'; this.onerror=null;">
         </div>
-        <h3 class="text-xl font-bold mb-2">Rahul Sharma</h3>
+        <h3 class="text-xl font-bold mb-2">Ashen Shanilka</h3>
         <p class="text-red-600 font-medium mb-4">Founder & Head Chef</p>
         <p class="text-gray-600">A culinary expert with over 15 years of experience, Chef Rahul brings his passion for perfect burgers to every recipe.</p>
       </div>
@@ -97,9 +97,9 @@ include('../includes/header.php');
         <div class="w-32 h-32 rounded-full overflow-hidden mx-auto mb-6">
           <img src="../assets/images/chef2.jpg" alt="Priya Malhotra" class="w-full h-full object-cover" onerror="this.src='https://randomuser.me/api/portraits/women/44.jpg'; this.onerror=null;">
         </div>
-        <h3 class="text-xl font-bold mb-2">Priya Malhotra</h3>
+        <h3 class="text-xl font-bold mb-2">Shanilka Herath</h3>
         <p class="text-red-600 font-medium mb-4">Executive Chef</p>
-        <p class="text-gray-600">Priya's innovative approach to flavor combinations has led to some of our most popular signature burgers.</p>
+        <p class="text-gray-600">Ashen's innovative approach to flavor combinations has led to some of our most popular signature burgers.</p>
       </div>
       
       <!-- Team Member 3 -->
@@ -107,9 +107,9 @@ include('../includes/header.php');
         <div class="w-32 h-32 rounded-full overflow-hidden mx-auto mb-6">
           <img src="../assets/images/manager.jpg" alt="Arjun Patel" class="w-full h-full object-cover" onerror="this.src='https://randomuser.me/api/portraits/men/76.jpg'; this.onerror=null;">
         </div>
-        <h3 class="text-xl font-bold mb-2">Arjun Patel</h3>
+        <h3 class="text-xl font-bold mb-2">Ashen Herath</h3>
         <p class="text-red-600 font-medium mb-4">Operations Manager</p>
-        <p class="text-gray-600">Ensuring smooth operations and quick delivery, Arjun makes sure your burger experience is perfect from order to delivery.</p>
+        <p class="text-gray-600">Ensuring smooth operations and quick delivery, Herath makes sure your burger experience is perfect from order to delivery.</p>
       </div>
     </div>
   </div>
@@ -180,7 +180,7 @@ include('../includes/header.php');
         
         <div class="bg-gray-200 h-full">
           <!-- Placeholder for Google Map or restaurant image -->
-          <div class="h-full w-full bg-cover bg-center" style="background-image: url('../assets/images/restaurant-location.jpg');" onerror="this.style.backgroundColor='#f3f4f6'; this.innerHTML='<div class=\'flex items-center justify-center h-full\'><p class=\'text-gray-500 text-xl\'>Map Loading...</p></div>'; this.onerror=null;"></div>
+          <div class="h-full w-full bg-cover bg-center" style="background-image: url('../assets/images/resturant.jpg');" onerror="this.style.backgroundColor='#f3f4f6'; this.innerHTML='<div class=\'flex items-center justify-center h-full\'><p class=\'text-gray-500 text-xl\'>Map Loading...</p></div>'; this.onerror=null;"></div>
         </div>
       </div>
     </div>
