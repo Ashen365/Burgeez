@@ -69,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_add_to_cart']
 
 <!-- Menu Section -->
 <section class="py-16 px-4 bg-gray-50">
+<<<<<<< HEAD
   <div class="container mx-auto">
     <h2 class="text-4xl font-bold text-center text-red-600 mb-4">Our Menu</h2>
     <p class="text-gray-600 text-center mb-12 max-w-2xl mx-auto">Discover our selection of handcrafted gourmet burgers made with premium ingredients</p>
@@ -113,6 +114,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_add_to_cart']
               </button>
             </form>
           </div>
+=======
+  <h2 class="text-4xl font-bold text-center text-red-600 mb-12">Our Menu</h2>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+    <?php foreach ($menu_items as $item): ?>
+      <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <img src="/burgeez/assets/images/<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" class="w-full h-48 object-cover" />
+        <div class="p-4">
+          <h3 class="text-xl font-semibold text-gray-800 mb-2"><?= htmlspecialchars($item['name']) ?></h3>
+          <p class="text-gray-600 mb-3">Rs. <?= number_format($item['price'], 2) ?></p>
+          <p class="text-gray-500 mb-4"><?= htmlspecialchars($item['description']) ?></p> <!-- Display description -->
+          <form method="POST" action="menu.php">
+            <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
+            <button type="submit" name="add_to_cart" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Add to Cart</button>
+          </form>
+>>>>>>> 3447ad93c4a0f374f0af178462f763802e5a3c91
         </div>
       <?php endforeach; ?>
     </div>

@@ -361,6 +361,7 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
             </div>
         </nav>
 
+<<<<<<< HEAD
         <!-- Main Content -->
         <div class="container mx-auto px-4 py-6">
             <div class="flex justify-between items-center mb-6">
@@ -747,3 +748,79 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
     </script>
 </body>
 </html>
+=======
+<div class="max-w-screen-lg mx-auto mt-12 p-8 bg-gray-50 rounded-lg shadow-lg">
+    <h2 class="text-3xl font-bold text-center text-red-600 mb-6">Edit Menu Item</h2>
+
+    <?php if ($message): ?>
+        <div class="mb-6 p-4 text-white bg-red-500 rounded"><?= htmlspecialchars($message) ?></div>
+    <?php endif; ?>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        <div>
+            <label class="block text-lg font-semibold mb-2" for="name">Burger Name</label>
+            <input class="w-full border border-gray-300 rounded-lg px-4 py-2" type="text" id="name" name="name" required value="<?= htmlspecialchars($item['name']) ?>" />
+        </div>
+
+        <div>
+            <label class="block text-lg font-semibold mb-2" for="price">Price (Rs.)</label>
+            <input class="w-full border border-gray-300 rounded-lg px-4 py-2" type="number" step="0.01" id="price" name="price" required value="<?= htmlspecialchars($item['price']) ?>" />
+        </div>
+
+        <div>
+            <label class="block text-lg font-semibold mb-2" for="description">Description</label>
+            <textarea class="w-full border border-gray-300 rounded-lg px-4 py-2" id="description" name="description" rows="4"><?= htmlspecialchars($item['description']) ?></textarea>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold mb-2">Current Image</h3>
+            <div class="flex items-center gap-4">
+                <img id="imagePreview" src="../assets/images/<?= htmlspecialchars($item['image']) ?>" alt="Current Image" class="w-48 h-32 object-cover rounded-lg shadow-md" />
+                <div class="flex flex-col">
+                    <label class="block text-lg font-semibold mb-2" for="image">Upload New Image (optional)</label>
+                    <input class="w-full" type="file" id="image" name="image" accept="image/*" />
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-6">
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg shadow-lg">Update Item</button>
+        </div>
+    </form>
+
+    <div class="text-center mt-8">
+        <a href="manage_menu.php" class="text-red-600 hover:underline text-lg">← Back to Manage Menu</a>
+    </div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('image');
+    const preview = document.getElementById('imagePreview');
+
+    fileInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+            if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+                alert('Invalid file type.');
+                fileInput.value = '';
+                preview.style.display = 'none';
+                return;
+            }
+
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Image size exceeds 2MB.');
+                fileInput.value = '';
+                preview.style.display = 'none';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.setAttribute('src', e.target.result);
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+>>>>>>> 3447ad93c4a0f374f0af178462f763802e5a3c91
