@@ -129,7 +129,7 @@ include('../includes/header.php');
               </div>
               <div>
                 <h3 class="font-semibold text-lg">Address</h3>
-                <p class="text-gray-600">123 Burger Street, Foodie District, Mumbai 400001</p>
+                <p class="text-gray-600">123 Malmawatha Street, Nawalapitiya  West, Nawalapitiya 400001</p>
               </div>
             </div>
             
@@ -139,7 +139,7 @@ include('../includes/header.php');
               </div>
               <div>
                 <h3 class="font-semibold text-lg">Phone</h3>
-                <p class="text-gray-600">+91 9876543210</p>
+                <p class="text-gray-600">+94 776376306</p>
               </div>
             </div>
             
@@ -195,7 +195,7 @@ include('../includes/header.php');
       <a href="../pages/menu.php" class="bg-white text-red-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition transform hover:scale-105 shadow-lg">
         <i class="fas fa-hamburger mr-2"></i> View Our Menu
       </a>
-      <a href="#" class="bg-transparent border-2 border-white text-white hover:bg-white hover:text-red-600 px-8 py-3 rounded-lg font-semibold transition transform hover:scale-105">
+      <a href="../pages/contact.php" class="bg-transparent border-2 border-white text-white hover:bg-white hover:text-red-600 px-8 py-3 rounded-lg font-semibold transition transform hover:scale-105">
         <i class="fas fa-phone-alt mr-2"></i> Contact Us
       </a>
     </div>

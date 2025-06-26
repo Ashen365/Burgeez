@@ -52,7 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_add_to_cart']
                     'id' => $item['id'],
                     'name' => $item['name'],
                     'price' => $item['price'],
-                    'qty' => $qty
+                    'qty' => $qty,
+                    // Add the image information
+                    'image' => $item['image'] // Add this line
                 ];
             }
             break;

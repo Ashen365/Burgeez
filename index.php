@@ -1,4 +1,3 @@
-<!-- D:\projects\htdocs\burgeez\index.php -->
 <?php include('includes/header.php'); ?>
 
 <!-- Hero Section -->
@@ -376,7 +375,8 @@
           </div>
         </div>
         <div class="md:w-1/3 flex justify-center">
-          <img src="assets/images/app-mockup.png" alt="Burgeez Mobile App" class="h-72 object-contain" onerror="this.src='https://cdn.dribbble.com/users/1615584/screenshots/15750444/media/4ea76c9f4f2bc94996bf0d958a7d2381.png?compress=1&resize=800x600'; this.onerror=null;">
+          <!-- Updated image path below. Replace 'your-ai-image.png' with your actual filename if different -->
+          <img src="assets/images/Mobile.jpg" alt="Download Burgeez Mobile App" class="h-72 object-contain" onerror="this.src='assets/images/app-mockup.png'; this.onerror=null;">
         </div>
       </div>
     </div>

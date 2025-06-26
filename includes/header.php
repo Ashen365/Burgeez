@@ -120,9 +120,23 @@ foreach ($_SESSION['cart'] as $item) {
         <!-- Right Section: Search, User, Cart -->
         <div class="flex items-center space-x-4">
           <!-- Search -->
-          <button class="hidden md:flex text-gray-600 hover:text-red-600 transition-colors">
-            <i class="fas fa-search text-lg"></i>
-          </button>
+          <div class="hidden md:block relative">
+            <button id="desktop-search-button" class="text-gray-600 hover:text-red-600 transition-colors">
+              <i class="fas fa-search text-lg"></i>
+            </button>
+            <!-- Desktop Search Dropdown -->
+            <div id="desktop-search-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg py-2 px-3 z-50">
+              <form action="/burgeez/pages/search-results.php" method="GET" class="flex items-center">
+                <input type="text" name="query" placeholder="Search menu items..." class="w-full pl-8 pr-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                <div class="absolute left-3">
+                  <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <button type="submit" class="ml-2 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700">
+                  <i class="fas fa-arrow-right text-sm"></i>
+                </button>
+              </form>
+            </div>
+          </div>
           
           <!-- User Menu -->
           <div class="relative">
@@ -170,12 +184,12 @@ foreach ($_SESSION['cart'] as $item) {
     <div id="nav-menu" class="md:hidden hidden bg-white border-t border-gray-100">
       <div class="container mx-auto px-4 py-3">
         <!-- Mobile Search -->
-        <div class="relative mb-4">
-          <input type="text" placeholder="Search menu items..." class="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-          <button class="absolute left-0 top-0 mt-2 ml-3 text-gray-400">
+        <form action="/burgeez/pages/search-results.php" method="GET" class="relative mb-4">
+          <input type="text" name="query" placeholder="Search menu items..." class="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+          <button type="submit" class="absolute left-0 top-0 mt-2 ml-3 text-gray-400">
             <i class="fas fa-search"></i>
           </button>
-        </div>
+        </form>
         
         <!-- Mobile Navigation Links -->
         <div class="flex flex-col space-y-2">
@@ -245,4 +259,31 @@ foreach ($_SESSION['cart'] as $item) {
         header.classList.remove('shadow-lg');
       }
     });
+    
+    // Desktop search functionality
+    const desktopSearchButton = document.getElementById('desktop-search-button');
+    const desktopSearchDropdown = document.getElementById('desktop-search-dropdown');
+    
+    if (desktopSearchButton && desktopSearchDropdown) {
+      desktopSearchButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        desktopSearchDropdown.classList.toggle('hidden');
+        // Focus on input when dropdown is shown
+        if (!desktopSearchDropdown.classList.contains('hidden')) {
+          desktopSearchDropdown.querySelector('input').focus();
+        }
+      });
+      
+      // Hide search dropdown when clicking outside
+      document.addEventListener('click', (event) => {
+        if (!desktopSearchButton.contains(event.target) && !desktopSearchDropdown.contains(event.target)) {
+          desktopSearchDropdown.classList.add('hidden');
+        }
+      });
+      
+      // Prevent dropdown from closing when clicking inside it
+      desktopSearchDropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
   </script>
