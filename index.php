@@ -26,9 +26,11 @@
           <a href="pages/menu.php" class="flex items-center bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg text-lg font-semibold transition transform hover:scale-105 shadow-md">
             <i class="fas fa-hamburger mr-2"></i> View Menu
           </a>
+          <?php if (!isset($_SESSION['user_id'])): ?>
           <a href="login.php" class="flex items-center bg-white hover:bg-gray-100 text-red-700 border-2 border-red-600 px-6 py-3 rounded-lg text-lg font-semibold transition transform hover:scale-105 shadow-sm">
             <i class="fas fa-user mr-2"></i> Login
           </a>
+          <?php endif; ?>
         </div>
       </div>
       <div class="w-full md:w-1/2 flex justify-center">
@@ -58,6 +60,7 @@
   </div>
 </div>
 
+<!-- The rest of the code remains unchanged -->
 <!-- Menu Highlights -->
 <section class="py-20 px-4 bg-gray-50">
   <div class="container mx-auto">
@@ -375,7 +378,6 @@
           </div>
         </div>
         <div class="md:w-1/3 flex justify-center">
-          <!-- Updated image path below. Replace 'your-ai-image.png' with your actual filename if different -->
           <img src="assets/images/Mobile.jpg" alt="Download Burgeez Mobile App" class="h-72 object-contain" onerror="this.src='assets/images/app-mockup.png'; this.onerror=null;">
         </div>
       </div>
