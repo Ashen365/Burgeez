@@ -1,16 +1,20 @@
 <?php
+// Prevent memory issues by setting a higher limit if needed
+// ini_set('memory_limit', '256M'); // Uncomment if needed and you have server permissions
+
 // Start with PHP code and no text content before opening tag
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Set up cart count
-if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = [];
-}
+// Set up cart count - simplified to avoid memory issues
 $cart_count = 0;
-foreach ($_SESSION['cart'] as $item) {
-    $cart_count += $item['qty'];
+if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
+    foreach ($_SESSION['cart'] as $item) {
+        if (isset($item['qty'])) {
+            $cart_count += (int)$item['qty'];
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -22,61 +26,32 @@ foreach ($_SESSION['cart'] as $item) {
 
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Simplified Tailwind config to avoid memory issues -->
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             primary: {
-              50: '#fff1f2',
-              100: '#ffe4e6',
-              200: '#fecdd3',
-              300: '#fda4af',
-              400: '#fb7185',
               500: '#f43f5e',
               600: '#e11d48',
               700: '#be123c',
-              800: '#9f1239',
-              900: '#881337',
             },
-          },
-          fontFamily: {
-            sans: ['Poppins', 'sans-serif'],
-          },
-          animation: {
-            'float': 'float 6s ease-in-out infinite',
-          },
-          keyframes: {
-            float: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-10px)' },
-            }
           }
         }
       }
     }
   </script>
-
-  <!-- GSAP CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-    }
-    
-    .animate-float {
-      animation: float 6s ease-in-out infinite;
-    }
-    
+    body { font-family: 'Poppins', sans-serif; }
+    .animate-float { animation: float 6s ease-in-out infinite; }
     @keyframes float {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-10px); }
@@ -145,13 +120,14 @@ foreach ($_SESSION['cart'] as $item) {
             </button>
             <!-- Dropdown -->
             <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
+              <?php if (!isset($_SESSION['user_id'])): ?>
               <a href="/burgeez/login.php" class="block px-4 py-2 text-gray-700 hover:bg-red-50">
                 <i class="fas fa-sign-in-alt w-5 text-red-500"></i> Login
               </a>
               <a href="/burgeez/register.php" class="block px-4 py-2 text-gray-700 hover:bg-red-50">
                 <i class="fas fa-user-plus w-5 text-red-500"></i> Register
               </a>
-              <hr class="my-1">
+              <?php else: ?>
               <a href="/burgeez/pages/profile.php" class="block px-4 py-2 text-gray-700 hover:bg-red-50">
                 <i class="fas fa-user w-5 text-red-500"></i> My Profile
               </a>
@@ -161,6 +137,7 @@ foreach ($_SESSION['cart'] as $item) {
               <a href="/burgeez/logout.php" class="block px-4 py-2 text-gray-700 hover:bg-red-50">
                 <i class="fas fa-sign-out-alt w-5 text-red-500"></i> Logout
               </a>
+              <?php endif; ?>
             </div>
           </div>
           
@@ -205,10 +182,6 @@ foreach ($_SESSION['cart'] as $item) {
             <i class="fas fa-shopping-bag w-6 text-red-500"></i>
             <span>Cart</span>
           </a>
-          <a href="/burgeez/pages/checkout.php" class="flex items-center py-2 px-3 rounded-lg hover:bg-red-50">
-            <i class="fas fa-credit-card w-6 text-red-500"></i>
-            <span>Checkout</span>
-          </a>
           <a href="/burgeez/pages/about.php" class="flex items-center py-2 px-3 rounded-lg hover:bg-red-50">
             <i class="fas fa-info-circle w-6 text-red-500"></i>
             <span>About Us</span>
@@ -217,73 +190,65 @@ foreach ($_SESSION['cart'] as $item) {
             <i class="fas fa-envelope w-6 text-red-500"></i>
             <span>Contact</span>
           </a>
+          <?php if (!isset($_SESSION['user_id'])): ?>
+          <a href="/burgeez/login.php" class="flex items-center py-2 px-3 rounded-lg hover:bg-red-50">
+            <i class="fas fa-sign-in-alt w-6 text-red-500"></i>
+            <span>Login</span>
+          </a>
+          <?php else: ?>
+          <a href="/burgeez/logout.php" class="flex items-center py-2 px-3 rounded-lg hover:bg-red-50">
+            <i class="fas fa-sign-out-alt w-6 text-red-500"></i>
+            <span>Logout</span>
+          </a>
+          <?php endif; ?>
         </div>
       </div>
     </div>
   </header>
 
-  <script>
-    // Toggle user dropdown
-    const userMenuButton = document.getElementById('user-menu-button');
-    const userDropdown = document.getElementById('user-dropdown');
-    
-    if (userMenuButton && userDropdown) {
-      userMenuButton.addEventListener('click', () => {
-        userDropdown.classList.toggle('hidden');
-      });
-      
-      // Hide dropdown when clicking outside
-      document.addEventListener('click', (event) => {
-        if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
-          userDropdown.classList.add('hidden');
-        }
-      });
-    }
-
-    // Mobile menu toggle
-    const navToggle = document.getElementById('nav-toggle');
-    const navMenu = document.getElementById('nav-menu');
-    
-    if (navToggle && navMenu) {
-      navToggle.addEventListener('click', () => {
-        navMenu.classList.toggle('hidden');
-      });
-    }
-
-    // Add shadow on scroll
-    window.addEventListener('scroll', () => {
-      const header = document.querySelector('header');
-      if (window.scrollY > 10) {
-        header.classList.add('shadow-lg');
-      } else {
-        header.classList.remove('shadow-lg');
-      }
+<script>
+// Simplified JavaScript to reduce memory usage
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle user dropdown
+  const userMenuButton = document.getElementById('user-menu-button');
+  const userDropdown = document.getElementById('user-dropdown');
+  
+  if (userMenuButton && userDropdown) {
+    userMenuButton.addEventListener('click', function() {
+      userDropdown.classList.toggle('hidden');
     });
-    
-    // Desktop search functionality
-    const desktopSearchButton = document.getElementById('desktop-search-button');
-    const desktopSearchDropdown = document.getElementById('desktop-search-dropdown');
-    
-    if (desktopSearchButton && desktopSearchDropdown) {
-      desktopSearchButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        desktopSearchDropdown.classList.toggle('hidden');
-        // Focus on input when dropdown is shown
-        if (!desktopSearchDropdown.classList.contains('hidden')) {
-          desktopSearchDropdown.querySelector('input').focus();
-        }
-      });
-      
-      // Hide search dropdown when clicking outside
-      document.addEventListener('click', (event) => {
-        if (!desktopSearchButton.contains(event.target) && !desktopSearchDropdown.contains(event.target)) {
-          desktopSearchDropdown.classList.add('hidden');
-        }
-      });
-      
-      // Prevent dropdown from closing when clicking inside it
-      desktopSearchDropdown.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
+  }
+
+  // Mobile menu toggle
+  const navToggle = document.getElementById('nav-toggle');
+  const navMenu = document.getElementById('nav-menu');
+  
+  if (navToggle && navMenu) {
+    navToggle.addEventListener('click', function() {
+      navMenu.classList.toggle('hidden');
+    });
+  }
+
+  // Desktop search functionality
+  const desktopSearchButton = document.getElementById('desktop-search-button');
+  const desktopSearchDropdown = document.getElementById('desktop-search-dropdown');
+  
+  if (desktopSearchButton && desktopSearchDropdown) {
+    desktopSearchButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      desktopSearchDropdown.classList.toggle('hidden');
+    });
+  }
+  
+  // Hide dropdowns when clicking elsewhere
+  document.addEventListener('click', function(event) {
+    if (userDropdown && userMenuButton && !userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+      userDropdown.classList.add('hidden');
     }
-  </script>
+    
+    if (desktopSearchDropdown && desktopSearchButton && !desktopSearchButton.contains(event.target) && !desktopSearchDropdown.contains(event.target)) {
+      desktopSearchDropdown.classList.add('hidden');
+    }
+  });
+});
+</script>
