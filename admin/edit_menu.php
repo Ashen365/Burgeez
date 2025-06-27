@@ -3,7 +3,6 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require_once '../includes/db.php';
-// Comment out auth_check if you're still having issues with it
 require_once '../includes/auth_check.php';
 
 if (!isset($_GET['id'])) {
@@ -27,19 +26,9 @@ $messageType = '';
 // Process form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
-    $category = $_POST['category'] ?? '';
     $price = filter_var($_POST['price'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
     $description = trim($_POST['description'] ?? '');
     $featured = isset($_POST['featured']) ? 1 : 0;
-    $spicy_level = (int)($_POST['spicy_level'] ?? 0);
-    
-    // Optional fields - check if columns exist in your table
-    $nutritional_info = isset($_POST['nutritional_info']) ? trim($_POST['nutritional_info']) : '';
-    $ingredients = isset($_POST['ingredients']) ? trim($_POST['ingredients']) : '';
-    $allergens = $_POST['allergens'] ?? [];
-    
-    // Convert allergens array to JSON
-    $allergensJson = json_encode($allergens);
     
     // Validate inputs
     if (empty($name) || $price <= 0) {
@@ -84,137 +73,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // Process gallery images if your table has this column
-        $galleryImagesJson = '[]';
-        if (isset($item['gallery_images'])) {
-            $galleryImages = [];
-            if (!empty($item['gallery_images'])) {
-                $galleryImages = json_decode($item['gallery_images'], true) ?? [];
-            }
-            
-            // Only process gallery uploads if your form has this field
-            if (isset($_FILES['gallery']) && is_array($_FILES['gallery']['name'])) {
-                $targetDir = '../assets/images/gallery/';
-                
-                // Ensure directory exists
-                if (!file_exists($targetDir)) {
-                    mkdir($targetDir, 0755, true);
-                }
-                
-                for ($i = 0; $i < count($_FILES['gallery']['name']); $i++) {
-                    if ($_FILES['gallery']['error'][$i] === UPLOAD_ERR_OK) {
-                        $tmpName = $_FILES['gallery']['tmp_name'][$i];
-                        $galleryImageName = 'gallery_' . time() . '_' . $i . '_' . bin2hex(random_bytes(4)) . '.' . 
-                            pathinfo($_FILES['gallery']['name'][$i], PATHINFO_EXTENSION);
-                        $targetFile = $targetDir . $galleryImageName;
-                        
-                        if (move_uploaded_file($tmpName, $targetFile)) {
-                            $galleryImages[] = $galleryImageName;
-                        }
-                    }
-                }
-            }
-            
-            // Handle gallery image deletion
-            if (isset($_POST['remove_gallery']) && is_array($_POST['remove_gallery'])) {
-                $targetDir = '../assets/images/gallery/';
-                foreach ($_POST['remove_gallery'] as $index) {
-                    if (isset($galleryImages[$index])) {
-                        $imageToRemove = $galleryImages[$index];
-                        if (file_exists($targetDir . $imageToRemove)) {
-                            unlink($targetDir . $imageToRemove);
-                        }
-                        unset($galleryImages[$index]);
-                    }
-                }
-                $galleryImages = array_values($galleryImages); // Re-index array
-            }
-            
-            $galleryImagesJson = json_encode(array_values($galleryImages));
-        }
-        
         if (!$message) {
             try {
-                // Check which columns exist in your table
-                $columns = [];
-                $values = [];
+                // Build update query
+                $sql = "UPDATE menu_items SET name = ?, price = ?, description = ?, image = ?";
+                $params = [$name, $price, $description, $imageName];
                 
-                // Required fields
-                $columns[] = "name = ?";
-                $values[] = $name;
-                
-                $columns[] = "description = ?";
-                $values[] = $description;
-                
-                $columns[] = "price = ?";
-                $values[] = $price;
-                
-                $columns[] = "image = ?";
-                $values[] = $imageName;
-                
-                $columns[] = "category = ?";
-                $values[] = $category;
-                
-                // Optional fields - check if they exist in your DB schema
-                // Use table information schema to check if columns exist
+                // Check if featured column exists
                 $stmt = $pdo->prepare("SHOW COLUMNS FROM menu_items LIKE 'featured'");
                 $stmt->execute();
                 if ($stmt->rowCount() > 0) {
-                    $columns[] = "featured = ?";
-                    $values[] = $featured;
+                    $sql .= ", featured = ?";
+                    $params[] = $featured;
                 }
                 
-                $stmt = $pdo->prepare("SHOW COLUMNS FROM menu_items LIKE 'spicy_level'");
-                $stmt->execute();
-                if ($stmt->rowCount() > 0) {
-                    $columns[] = "spicy_level = ?";
-                    $values[] = $spicy_level;
-                }
-                
-                $stmt = $pdo->prepare("SHOW COLUMNS FROM menu_items LIKE 'nutritional_info'");
-                $stmt->execute();
-                if ($stmt->rowCount() > 0) {
-                    $columns[] = "nutritional_info = ?";
-                    $values[] = $nutritional_info;
-                }
-                
-                $stmt = $pdo->prepare("SHOW COLUMNS FROM menu_items LIKE 'ingredients'");
-                $stmt->execute();
-                if ($stmt->rowCount() > 0) {
-                    $columns[] = "ingredients = ?";
-                    $values[] = $ingredients;
-                }
-                
-                $stmt = $pdo->prepare("SHOW COLUMNS FROM menu_items LIKE 'allergens'");
-                $stmt->execute();
-                if ($stmt->rowCount() > 0) {
-                    $columns[] = "allergens = ?";
-                    $values[] = $allergensJson;
-                }
-                
-                $stmt = $pdo->prepare("SHOW COLUMNS FROM menu_items LIKE 'gallery_images'");
-                $stmt->execute();
-                if ($stmt->rowCount() > 0) {
-                    $columns[] = "gallery_images = ?";
-                    $values[] = $galleryImagesJson;
-                }
-                
+                // Add updated_at if exists
                 $stmt = $pdo->prepare("SHOW COLUMNS FROM menu_items LIKE 'updated_at'");
                 $stmt->execute();
                 if ($stmt->rowCount() > 0) {
-                    $columns[] = "updated_at = NOW()";
+                    $sql .= ", updated_at = NOW()";
                 }
                 
-                // Add item ID to values array
-                $values[] = $id;
+                $sql .= " WHERE id = ?";
+                $params[] = $id;
                 
-                // Build and execute the update query
-                $sql = "UPDATE menu_items SET " . implode(", ", $columns) . " WHERE id = ?";
+                // Execute update
                 $stmt = $pdo->prepare($sql);
                 
-                if ($stmt->execute($values)) {
+                if ($stmt->execute($params)) {
                     $message = "Menu item updated successfully!";
                     $messageType = "success";
+                    
+                    // Refresh item data after update
+                    $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $item = $stmt->fetch();
                 } else {
                     $message = "Database error while updating.";
                     $messageType = "error";
@@ -227,48 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-<<<<<<< HEAD
-<div class="max-w-screen-lg mx-auto mt-12 bg-gray-50 p-8 rounded-lg shadow-lg">
-    <h2 class="text-3xl font-extrabold text-center text-red-600 mb-6">Edit Menu Item</h2>
-=======
-// Get categories for dropdown
-$categories = [];
-try {
-    $stmt = $pdo->query("SELECT DISTINCT category FROM menu_items ORDER BY category");
-    while ($row = $stmt->fetch()) {
-        if (!empty($row['category'])) {
-            $categories[] = $row['category'];
-        }
-    }
-} catch (PDOException $e) {
-    // Silently handle error
-}
-
-// Common allergens list
-$commonAllergens = [
-    'gluten' => 'Gluten',
-    'dairy' => 'Dairy',
-    'eggs' => 'Eggs',
-    'nuts' => 'Tree Nuts',
-    'peanuts' => 'Peanuts',
-    'shellfish' => 'Shellfish',
-    'soy' => 'Soy',
-    'fish' => 'Fish'
-];
-
-// Get item allergens
-$itemAllergens = [];
-if (!empty($item['allergens'])) {
-    $itemAllergens = json_decode($item['allergens'], true) ?? [];
-}
-
-// Parse gallery images
-$galleryImages = [];
-if (isset($item['gallery_images']) && !empty($item['gallery_images'])) {
-    $galleryImages = json_decode($item['gallery_images'], true) ?? [];
-}
-
-$spicy_level = $item['spicy_level'] ?? 0;
 $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item['updated_at'])) : date('F j, Y g:i A');
 ?>
 <!DOCTYPE html>
@@ -310,28 +161,37 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
     <style>
         body {
             font-family: 'Poppins', sans-serif;
+            background-color: #f9fafb;
         }
+        
         .input-field {
-            @apply bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5;
+            @apply bg-white border border-gray-300 text-gray-900 text-sm rounded focus:outline-none focus:border-primary-500 block w-full p-2;
         }
-        .btn-primary {
-            @apply text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none;
+        
+        /* Make description textarea much taller and wider */
+        textarea#description {
+            min-height: 200px;
+            width: 100%; /* Full width of its container */
+            resize: vertical;
+            line-height: 1.5;
         }
-        .btn-secondary {
-            @apply text-gray-900 bg-white hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 border border-gray-300 focus:outline-none;
+        
+        /* Simple buttons that match the screenshot */
+        .btn-danger {
+            @apply text-red-600 hover:text-red-800;
         }
-        .image-preview {
-            max-height: 200px;
-            object-fit: contain;
-            object-position: center;
+        
+        .btn-cancel {
+            @apply text-gray-700 hover:text-gray-900;
         }
-        .transition-all {
-            transition: all 0.3s ease;
+        
+        .btn-save {
+            @apply bg-primary-500 text-white hover:bg-primary-600 font-medium rounded px-5 py-2;
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen bg-gray-50">
+<body>
+    <div class="min-h-screen bg-white">
         <!-- Top Navigation -->
         <nav class="bg-white border-b border-gray-200">
             <div class="px-4 py-2.5 lg:px-6">
@@ -339,41 +199,40 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
                     <div class="flex items-center">
                         <a href="dashboard.php" class="flex items-center">
                             <div class="bg-primary-500 text-white h-8 w-8 rounded-md flex items-center justify-center mr-3">
-                                <i class="fas fa-utensils"></i>
+                                <span class="text-xl font-bold">B</span>
                             </div>
                             <span class="self-center text-xl font-semibold whitespace-nowrap">Burgeez Admin</span>
                         </a>
-                        <div class="hidden md:flex pl-10">
+                        <div class="hidden md:flex ml-8">
                             <ul class="flex space-x-8">
                                 <li><a href="dashboard.php" class="text-gray-500 hover:text-primary-600">Dashboard</a></li>
-                                <li><a href="manage_menu.php" class="text-primary-600 border-b-2 border-primary-600 pb-1">Menu</a></li>
+                                <li><a href="manage_menu.php" class="text-primary-500 border-b-2 border-primary-500">Menu</a></li>
                                 <li><a href="orders.php" class="text-gray-500 hover:text-primary-600">Orders</a></li>
                                 <li><a href="settings.php" class="text-gray-500 hover:text-primary-600">Settings</a></li>
                             </ul>
                         </div>
                     </div>
-                    <div class="flex items-center lg:order-2">
-                        <button type="button" class="hidden sm:inline-flex items-center p-2 ml-1 text-sm text-gray-500 rounded-lg hover:bg-gray-100">
-                            <span>Admin</span>
-                            <img class="w-8 h-8 rounded-full ml-2" src="../assets/images/admin-avatar.png" alt="Admin Avatar" onerror="this.src='https://ui-avatars.com/api/?name=Admin&background=random'">
-                        </button>
-                        <button type="button" class="inline-flex items-center p-2 ml-1 text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200">
-                            <i class="fas fa-bars"></i>
-                        </button>
+                    <div class="flex items-center">
+                        <span class="text-sm text-gray-600 mr-2">Admin</span>
+                        <div class="bg-primary-100 text-primary-800 w-8 h-8 rounded-full flex items-center justify-center">
+                            <span class="font-semibold">AD</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </nav>
 
-<<<<<<< HEAD
-        <!-- Main Content -->
-        <div class="container mx-auto px-4 py-6">
+        <!-- Main Content - Matching the screenshot's simple layout -->
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            <div class="flex items-center mb-4">
+                <a href="manage_menu.php" class="text-gray-500 hover:text-primary-600 flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Menu Management
+                </a>
+            </div>
+            
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <a href="manage_menu.php" class="text-gray-500 hover:text-primary-600 flex items-center">
-                        <i class="fas fa-arrow-left mr-2"></i> Back to Menu Management
-                    </a>
-                    <h1 class="text-2xl font-bold mt-2">Edit Menu Item</h1>
+                    <h1 class="text-2xl font-bold">Edit Menu Item</h1>
                     <p class="text-gray-600">Update details for "<?= htmlspecialchars($item['name']) ?>"</p>
                 </div>
                 <div class="text-right">
@@ -382,7 +241,6 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
                 </div>
             </div>
 
-            <!-- Status Messages -->
             <?php if ($messageType === 'success'): ?>
             <div class="p-4 mb-6 text-sm text-green-700 bg-green-100 rounded-lg" role="alert">
                 <div class="flex">
@@ -399,176 +257,60 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
             </div>
             <?php endif; ?>
 
-            <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                <form method="post" enctype="multipart/form-data">
-                    <!-- Form Content -->
-                    <div class="md:grid md:grid-cols-3 md:gap-6">
-                        <!-- Left Column -->
-                        <div class="md:col-span-2 p-6 border-b md:border-b-0 md:border-r border-gray-200">
-                            <div class="space-y-6">
-                                <div>
-                                    <label for="name" class="block mb-2 text-sm font-medium text-gray-900">Burger Name <span class="text-red-500">*</span></label>
-                                    <input type="text" id="name" name="name" class="input-field" value="<?= htmlspecialchars($item['name']) ?>" required>
-                                </div>
-                                
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="category" class="block mb-2 text-sm font-medium text-gray-900">Category</label>
-                                        <div class="relative">
-                                            <select id="category" name="category" class="input-field pr-8">
-                                                <option value="">Select Category</option>
-                                                <?php foreach ($categories as $cat): ?>
-                                                <option value="<?= htmlspecialchars($cat) ?>" <?= ($item['category'] ?? '') === $cat ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($cat) ?>
-                                                </option>
-                                                <?php endforeach; ?>
-                                                <option value="new">+ Add New Category</option>
-                                            </select>
-                                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                <i class="fas fa-chevron-down text-gray-400"></i>
-                                            </div>
-                                        </div>
-                                        
-                                        <div id="newCategoryField" class="mt-3 hidden">
-                                            <input type="text" id="newCategory" class="input-field" placeholder="Enter new category name">
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <label for="price" class="block mb-2 text-sm font-medium text-gray-900">Price (Rs.) <span class="text-red-500">*</span></label>
-                                        <div class="relative">
-                                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">Rs.</span>
-                                            <input type="number" id="price" name="price" step="0.01" min="0" class="input-field pl-10" value="<?= htmlspecialchars($item['price']) ?>" required>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label for="description" class="block mb-2 text-sm font-medium text-gray-900">Description</label>
-                                    <textarea id="description" name="description" rows="4" class="input-field"><?= htmlspecialchars($item['description']) ?></textarea>
-                                </div>
-                                
-                                <?php if (isset($item['featured'])): ?>
-                                <div class="flex items-center">
-                                    <input id="featured" name="featured" type="checkbox" value="1" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500" 
-                                        <?= (!empty($item['featured']) && $item['featured'] == 1) ? 'checked' : '' ?>>
-                                    <label for="featured" class="ml-2 text-sm font-medium text-gray-900">Featured Item (display on homepage)</label>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if (isset($item['spicy_level'])): ?>
-                                <div>
-                                    <label class="block mb-2 text-sm font-medium text-gray-900">Spiciness Level</label>
-                                    <div class="flex items-center space-x-1" id="spicyLevelContainer" data-level="<?= $spicy_level ?>">
-                                        <input type="hidden" name="spicy_level" id="spicy_level" value="<?= $spicy_level ?>">
-                                        <?php for($i = 1; $i <= 5; $i++): ?>
-                                        <button type="button" class="spicy-btn p-1 focus:outline-none" data-level="<?= $i ?>">
-                                            <i class="fas fa-pepper-hot text-xl <?= $i <= $spicy_level ? 'text-red-500' : 'text-gray-300' ?>"></i>
-                                        </button>
-                                        <?php endfor; ?>
-                                        <span id="spicyText" class="ml-2 text-sm text-gray-700">
-                                            <?php 
-                                            echo $spicy_level == 0 ? 'Not Spicy' : 
-                                                ($spicy_level == 1 ? 'Mild' : 
-                                                ($spicy_level == 2 ? 'Medium' : 
-                                                ($spicy_level == 3 ? 'Spicy' : 
-                                                ($spicy_level == 4 ? 'Very Spicy' : 'Extreme'))));
-                                            ?>
-                                        </span>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if (isset($item['ingredients'])): ?>
-                                <div>
-                                    <label for="ingredients" class="block mb-2 text-sm font-medium text-gray-900">Ingredients</label>
-                                    <textarea id="ingredients" name="ingredients" rows="3" class="input-field" placeholder="Comma separated list of ingredients"><?= htmlspecialchars($item['ingredients']) ?></textarea>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if (isset($item['nutritional_info'])): ?>
-                                <div>
-                                    <label for="nutritional_info" class="block mb-2 text-sm font-medium text-gray-900">Nutritional Information</label>
-                                    <textarea id="nutritional_info" name="nutritional_info" rows="3" class="input-field" placeholder="E.g., Calories: 650, Protein: 35g, Carbs: 45g, Fat: 32g"><?= htmlspecialchars($item['nutritional_info']) ?></textarea>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if (isset($item['allergens'])): ?>
-                                <div>
-                                    <label class="block mb-2 text-sm font-medium text-gray-900">Allergens</label>
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        <?php foreach($commonAllergens as $key => $allergen): ?>
-                                        <div class="flex items-center">
-                                            <input type="checkbox" id="allergen_<?= $key ?>" name="allergens[]" value="<?= $key ?>" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500" 
-                                                <?= in_array($key, $itemAllergens) ? 'checked' : '' ?>>
-                                            <label for="allergen_<?= $key ?>" class="ml-2 text-sm font-medium text-gray-700">
-                                                <?= htmlspecialchars($allergen) ?>
-                                            </label>
-                                        </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
+            <form method="post" enctype="multipart/form-data" class="mb-6">
+                <!-- Modified grid layout - 60% for form fields, 40% for image -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+                    <!-- Left Column - Expanded to take 8 columns (67%) of the grid -->
+                    <div class="md:col-span-8">
+                        <div class="mb-6">
+                            <label for="name" class="block mb-2 text-sm font-medium text-gray-900">Burger Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="name" name="name" class="input-field" value="<?= htmlspecialchars($item['name']) ?>" required>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label for="price" class="block mb-2 text-sm font-medium text-gray-900">Price (Rs.) <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">Rs.</span>
+                                <input type="text" id="price" name="price" class="input-field pl-10" value="<?= htmlspecialchars($item['price']) ?>" required>
                             </div>
                         </div>
                         
-                        <!-- Right Column - Image -->
-                        <div class="p-6">
-                            <div class="mb-6">
-                                <label class="block mb-2 text-sm font-medium text-gray-900">Item Image</label>
-                                <div class="flex flex-col items-center justify-center bg-gray-50 border border-gray-300 border-dashed rounded-lg p-6">
-                                    <img id="imagePreview" src="../assets/images/<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" class="mb-4 w-full h-auto max-h-48 rounded-lg object-cover" onerror="this.src='https://via.placeholder.com/400x300/f97316/ffffff?text=Burger+Image'">
-                                    
-                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <svg class="w-8 h-8 mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                        </svg>
-                                        <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
-                                        <p class="text-xs text-gray-500">PNG, JPG or WEBP (MAX. 5MB)</p>
-                                    </div>
-                                    <input id="image" name="image" type="file" accept="image/*" class="hidden">
-                                </div>
-                            </div>
-                            
-                            <?php if (isset($item['gallery_images'])): ?>
-                            <div>
-                                <label class="block mb-2 text-sm font-medium text-gray-900">Gallery Images</label>
-                                <div class="grid grid-cols-2 gap-2 mb-3" id="galleryPreviewContainer">
-                                    <?php if (!empty($galleryImages)): ?>
-                                        <?php foreach ($galleryImages as $index => $image): ?>
-                                        <div class="relative group">
-                                            <img src="../assets/images/gallery/<?= htmlspecialchars($image) ?>" alt="Gallery image" class="w-full h-24 object-cover rounded border border-gray-200 hover:opacity-75 transition">
-                                            <button type="button" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100 transition" 
-                                                   onclick="removeGalleryImage(this, <?= $index ?>)">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                            <input type="hidden" name="existing_gallery[]" value="<?= htmlspecialchars($image) ?>">
-                                        </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
-                                <label class="cursor-pointer flex items-center justify-center py-2 border border-gray-300 border-dashed rounded-lg bg-gray-50 hover:bg-gray-100">
-                                    <span class="text-sm text-gray-600"><i class="fas fa-plus mr-1"></i> Add more images</span>
-                                    <input type="file" id="gallery" name="gallery[]" multiple accept="image/*" class="hidden">
-                                </label>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <div class="mt-6 border-t border-gray-200 pt-4">
-                                <div class="flex justify-between items-center">
-                                    <button type="button" id="deleteBtn" class="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-700">
-                                        <i class="fas fa-trash mr-1"></i> Delete Item
-                                    </button>
-                                    <div>
-                                        <button type="button" onclick="window.location.href='manage_menu.php'" class="btn-secondary mr-2">Cancel</button>
-                                        <button type="submit" class="btn-primary">Save Changes</button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="mb-6">
+                            <label for="description" class="block mb-2 text-sm font-medium text-gray-900">Description</label>
+                            <!-- Wider textarea for description - takes full width of its larger container -->
+                            <textarea id="description" name="description" class="input-field"><?= htmlspecialchars($item['description']) ?></textarea>
                         </div>
                     </div>
-                </form>
-            </div>
+                    
+                    <!-- Right Column - Reduced to take 4 columns (33%) of the grid -->
+                    <div class="md:col-span-4">
+                        <label class="block mb-2 text-sm font-medium text-gray-900">Item Image</label>
+                        <div class="mb-4">
+                            <img id="imagePreview" src="../assets/images/<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" class="w-full h-64 object-cover rounded" onerror="this.src='https://via.placeholder.com/400x300/f97316/ffffff?text=Burger+Image'">
+                        </div>
+                        
+                        <div id="uploadArea" class="flex flex-col items-center justify-center p-6 border border-gray-300 border-dashed rounded bg-gray-50 cursor-pointer">
+                            <svg class="w-10 h-10 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <p class="mb-1 text-sm text-gray-500">Click to upload or drag and drop</p>
+                            <p class="text-xs text-gray-500">PNG, JPG or WEBP (MAX. 5MB)</p>
+                            <input id="image" name="image" type="file" accept="image/*" class="hidden">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bottom buttons - simple layout matching the screenshot -->
+                <div class="mt-10 flex justify-between items-center">
+                    <button type="button" id="deleteBtn" class="btn-danger flex items-center">
+                        <i class="fas fa-trash-alt mr-2"></i> Delete Item
+                    </button>
+                    <div class="space-x-4">
+                        <button type="button" onclick="window.location.href='manage_menu.php'" class="btn-cancel">Cancel</button>
+                        <button type="submit" class="btn-save">Save Changes</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -593,8 +335,8 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
                     </div>
                 </div>
                 <div class="flex justify-end gap-3">
-                    <button type="button" id="cancelDeleteBtn" class="btn-secondary">Cancel</button>
-                    <a href="delete_menu_item.php?id=<?= $id ?>&confirm=true" class="inline-flex items-center justify-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm focus:outline-none">
+                    <button type="button" id="cancelDeleteBtn" class="btn-cancel px-4 py-2">Cancel</button>
+                    <a href="delete_menu_item.php?id=<?= $id ?>&confirm=true" class="bg-red-600 hover:bg-red-700 text-white font-medium rounded px-4 py-2">
                         <i class="fas fa-trash mr-2"></i> Delete
                     </a>
                 </div>
@@ -603,60 +345,13 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
     </div>
 
     <script>
-        // Category dropdown
-        const categorySelect = document.getElementById('category');
-        const newCategoryField = document.getElementById('newCategoryField');
-        const newCategoryInput = document.getElementById('newCategory');
-        
-        if (categorySelect && newCategoryField && newCategoryInput) {
-            categorySelect.addEventListener('change', function() {
-                if (this.value === 'new') {
-                    newCategoryField.classList.remove('hidden');
-                    newCategoryInput.focus();
-                    newCategoryInput.setAttribute('name', 'category');
-                    categorySelect.removeAttribute('name');
-                } else {
-                    newCategoryField.classList.add('hidden');
-                    newCategoryInput.removeAttribute('name');
-                    categorySelect.setAttribute('name', 'category');
-                }
-            });
-        }
-        
-        // Spicy level buttons
-        const spicyBtns = document.querySelectorAll('.spicy-btn');
-        const spicyInput = document.getElementById('spicy_level');
-        const spicyText = document.getElementById('spicyText');
-        const spicyTexts = ['Not Spicy', 'Mild', 'Medium', 'Spicy', 'Very Spicy', 'Extreme'];
-        
-        if (spicyBtns.length > 0 && spicyInput && spicyText) {
-            spicyBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const level = parseInt(this.getAttribute('data-level'));
-                    spicyInput.value = level;
-                    spicyText.textContent = spicyTexts[level] || 'Not Spicy';
-                    
-                    // Update all pepper icons
-                    document.querySelectorAll('.spicy-btn i').forEach((icon, index) => {
-                        if (index < level) {
-                            icon.classList.add('text-red-500');
-                            icon.classList.remove('text-gray-300');
-                        } else {
-                            icon.classList.remove('text-red-500');
-                            icon.classList.add('text-gray-300');
-                        }
-                    });
-                });
-            });
-        }
-        
-        // Image preview
+        // Image preview functionality
         const imageInput = document.getElementById('image');
         const imagePreview = document.getElementById('imagePreview');
-        const imageContainer = document.querySelector('.flex.flex-col.items-center.justify-center.bg-gray-50');
+        const uploadArea = document.getElementById('uploadArea');
         
-        if (imageInput && imagePreview && imageContainer) {
-            imageContainer.addEventListener('click', function() {
+        if (imageInput && imagePreview && uploadArea) {
+            uploadArea.addEventListener('click', function() {
                 imageInput.click();
             });
             
@@ -669,58 +364,46 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
                     reader.readAsDataURL(this.files[0]);
                 }
             });
-        }
-        
-        // Gallery image upload
-        const galleryInput = document.getElementById('gallery');
-        const galleryPreviewContainer = document.getElementById('galleryPreviewContainer');
-        
-        if (galleryInput && galleryPreviewContainer) {
-            galleryInput.addEventListener('change', function() {
-                if (this.files && this.files.length > 0) {
-                    for (let i = 0; i < this.files.length; i++) {
-                        const file = this.files[i];
-                        if (file) {
-                            const reader = new FileReader();
-                            reader.onload = function(e) {
-                                const div = document.createElement('div');
-                                div.className = 'relative group';
-                                div.innerHTML = `
-                                    <img src="${e.target.result}" class="w-full h-24 object-cover rounded border border-gray-200 hover:opacity-75 transition">
-                                    <button type="button" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100 transition" 
-                                           onclick="removeNewGalleryImage(this)">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                `;
-                                galleryPreviewContainer.appendChild(div);
-                            }
-                            reader.readAsDataURL(file);
-                        }
+            
+            // Add drag and drop functionality
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                uploadArea.classList.add('bg-gray-100');
+            }
+            
+            function unhighlight() {
+                uploadArea.classList.remove('bg-gray-100');
+            }
+            
+            uploadArea.addEventListener('drop', function(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files && files.length) {
+                    imageInput.files = files;
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
                     }
+                    reader.readAsDataURL(files[0]);
                 }
             });
-        }
-        
-        // Gallery image removal
-        function removeGalleryImage(button, index) {
-            const container = button.closest('div');
-            if (container) {
-                container.remove();
-                
-                // Add hidden input to track removed images
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'remove_gallery[]';
-                input.value = index;
-                document.querySelector('form').appendChild(input);
-            }
-        }
-        
-        function removeNewGalleryImage(button) {
-            const container = button.closest('div');
-            if (container) {
-                container.remove();
-            }
         }
         
         // Delete modal functionality
@@ -752,80 +435,3 @@ $lastUpdated = isset($item['updated_at']) ? date('F j, Y g:i A', strtotime($item
     </script>
 </body>
 </html>
-=======
-<div class="max-w-screen-lg mx-auto mt-12 p-8 bg-gray-50 rounded-lg shadow-lg">
-    <h2 class="text-3xl font-bold text-center text-red-600 mb-6">Edit Menu Item</h2>
->>>>>>> 1f109641c5b6e413fe48df62c36702f4497d36f0
-
-    <?php if ($message): ?>
-        <div class="mb-6 p-4 text-white bg-red-500 rounded"><?= htmlspecialchars($message) ?></div>
-    <?php endif; ?>
-
-    <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div class="flex flex-col">
-            <label class="block text-lg font-semibold mb-2" for="name">Burger Name</label>
-            <input class="w-full border border-gray-300 rounded-lg px-4 py-2" type="text" id="name" name="name" required value="<?= htmlspecialchars($item['name']) ?>" />
-        </div>
-
-        <div class="flex flex-col">
-            <label class="block text-lg font-semibold mb-2" for="price">Price (Rs.)</label>
-            <input class="w-full border border-gray-300 rounded-lg px-4 py-2" type="number" step="0.01" id="price" name="price" required value="<?= htmlspecialchars($item['price']) ?>" />
-        </div>
-
-        <div class="flex flex-col md:col-span-2">
-            <label class="block text-lg font-semibold mb-2" for="description">Description</label>
-            <textarea class="w-full border border-gray-300 rounded-lg px-4 py-2" id="description" name="description" rows="4"><?= htmlspecialchars($item['description']) ?></textarea>
-        </div>
-
-        <div class="md:col-span-2">
-            <h3 class="text-lg font-semibold mb-2">Current Image</h3>
-            <div class="flex items-center gap-4">
-                <img id="imagePreview" src="../assets/images/<?= htmlspecialchars($item['image']) ?>" alt="Current Image" class="w-48 h-32 object-cover rounded-lg shadow-md" />
-                <div class="flex flex-col">
-                    <label class="block text-lg font-semibold mb-2" for="image">Upload New Image (optional)</label>
-                    <input class="w-full" type="file" id="image" name="image" accept="image/*" />
-                </div>
-            </div>
-        </div>
-
-        <div class="md:col-span-2 flex justify-center mt-6">
-            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white text-lg px-6 py-3 rounded-lg shadow-lg">Update Item</button>
-        </div>
-    </form>
-
-    <div class="text-center mt-8">
-        <a href="manage_menu.php" class="text-red-600 hover:underline text-lg">← Back to Manage Menu</a>
-    </div>
-</div>
-
-<script>
-    const fileInput = document.getElementById('image');
-    const preview = document.getElementById('imagePreview');
-
-    fileInput.addEventListener('change', function () {
-        const file = this.files[0];
-        if (file) {
-            if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-                alert('Invalid file type.');
-                fileInput.value = '';
-                preview.style.display = 'none';
-                return;
-            }
-
-            if (file.size > 2 * 1024 * 1024) {
-                alert('Image size exceeds 2MB.');
-                fileInput.value = '';
-                preview.style.display = 'none';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                preview.setAttribute('src', e.target.result);
-                preview.style.display = 'block';
-            }
-            reader.readAsDataURL(file);
-        }
-    });
-</script>
->>>>>>> 3447ad93c4a0f374f0af178462f763802e5a3c91
